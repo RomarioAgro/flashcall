@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Tuple
 from flashcall_newtel_OOP import Newtel
-from decouple import config as conf_token
+from dotenv import load_dotenv
 import requests
 from sys import argv
 import os
@@ -17,6 +17,9 @@ STATUS_DICT = {
     "not available": 'сеть недоступна',
     "cancel": 'сеть недоступна'
 }
+
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path=env_path)
 
 if __name__ == '__main__':
     httpclient_logger = logging.getLogger("http.client")
@@ -109,7 +112,7 @@ class NewtelCV(Newtel):
         метод проверки статуса звонка call_verification
         :return:
         """
-        url = conf_token('mts_status_url', None)
+        url = os.getenv('mts_status_url')
         r = requests.get(url=url, params=self.answer)
         logging.debug(r.json())
         if r.json()['result'] == 'Error! Record not found':
