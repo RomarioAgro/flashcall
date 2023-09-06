@@ -4,7 +4,7 @@ import os
 from sys import exit, argv
 from decouple import config
 import logging
-from typing import Tuple
+from typing import Tuple, Any
 logging.basicConfig(
     filename='D:\\files\\' + argv[1] + '_' + os.path.basename(__file__)[:-3] + '_.log',
     filemode='a',
@@ -29,10 +29,10 @@ from flashcall_sigmasms_OOP import SigmaSMS
 from flashcall_nothing_OOP import Nothing
 from smstraffic_OOP import SMStraffic
 from mts_push import Mts_push
-from typing import Any
 
 
-CALL_TIMEOUT = 60  # таймаут между звонками
+
+CALL_TIMEOUT = 90  # таймаут между звонками
 QT_ENTER_KEY1 = 'special 16777220'
 QT_ENTER_KEY2 = 'special 16777221'
 QT_ESCAPE = 'Escape:27'
@@ -42,8 +42,8 @@ def start_make_window(*inf_text_number):
     """
     функция создает объект с GUI окном
     inf_text_number tuple
-    0 - str с текстом в окне
-    1 - str номер телефона
+    [0] - str с текстом в окне
+    [1] - str номер телефона
     """
     sg.theme('SystemDefaultForReal')  # Add a touch of color
     # All the stuff inside your window.
