@@ -180,7 +180,10 @@ def make_window(i_number: str = '55555555', callers: Tuple = None) -> int:
             count_calls = 1
         if type(i_caller).__name__ == 'NewtelCV':
             if push_status == 'notanswered':
-                push_status = i_caller.status()
+                try:
+                    push_status = i_caller.status()
+                except Exception as exc:
+                    logging.debug("оишбка проверки статуса {0}".format(exc))
             if push_status == 'good':
                 if mini_display:
                     show_qr(lcd=lcd_comm, image=None)
