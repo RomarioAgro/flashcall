@@ -13,16 +13,18 @@ logging.basicConfig(
     datefmt='%H:%M:%S')
 
 try:
-    from turing_smart_screen_python.library.lcd.lcd_comm_rev_b import LcdCommRevB
-    from turing_smart_screen_python.qr import check_com_port, qr_image, show_qr
+    from turing_smart_screen_python.qr import output_content_on_minidisplay
+    # from turing_smart_screen_python import qr
 except Exception as exs:
     logging.debug(exs)
     print(exs)
 
+import threading
+
+
 
 env_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path=env_path)
-COM_PORT = os.getenv('lcd_com')
 
 
 os.chdir('d:\\kassa\\script_py\\flashcall\\')
@@ -81,22 +83,16 @@ def start_make_window(*inf_text_number):
     return window
 
 
-def qr_display_out(*numbers):
+def qr_display_out(*numbers) -> None:
     """
     функция создает объект вывода QR кода на миниэкран
     ну и сразу что-то там выводит
     """
-    qr_pict = qr_image(i_text='tel:+{0}'.format(numbers[0]))
-    lcd_comm_mini_display = LcdCommRevB(com_port=COM_PORT,
-                           display_width=320,
-                           display_height=480)
-    show_qr(lcd=lcd_comm_mini_display, image=qr_pict, qr_text="Для списания\n"
-                                                 "бонусов совершите звонок\n"
-                                                 "на номер: {0}\n"
-                                                 "с номера: {1}".format(
-        readable_number(numbers[0]), readable_number(numbers[1])))
-
-    return lcd_comm_mini_display
+    qr_pict = 'tel:+{0}'.format(numbers[0])
+    qr_text = "Для списания\nбонусов совершите звонок\nна номер: {0}\nс номера: {1}".\
+        format(readable_number(numbers[0]), readable_number(numbers[1]))
+    threads1 = threading.Thread(target=output_content_on_minidisplay, args=(qr_pict, qr_text, numbers[2]))
+    threads1.start()
 
 
 
@@ -123,10 +119,9 @@ def make_window(i_number: str = '55555555', callers: Tuple = None) -> int:
             status_code, i_pin, info_text = i_caller.call_password(timeout=CALL_TIMEOUT)
             # вывод QR на минидисплее
             try:
-                if check_com_port(COM_PORT):
-                    lcd_comm = qr_display_out(i_pin['confirmationNumber'], i_pin['client_Number'])
-                    mini_display = True
+                qr_display_out(i_pin['confirmationNumber'], i_pin['client_Number'], True)
             except Exception as exc:
+                print(exc)
                 logging.error(exc)
         else:
             status_code, i_pin, info_text = i_caller.call_password()
@@ -150,7 +145,7 @@ def make_window(i_number: str = '55555555', callers: Tuple = None) -> int:
     i = 0  # изменение прогрессбара
     push_status = 'notanswered'
     while True:
-        event, values = window.read(timeout=1500)  # ждем ввода, это миллисекунды
+        event, values = window.read(timeout=1000)  # ждем ввода, это миллисекунды
         if event in ('\r', QT_ENTER_KEY1, QT_ENTER_KEY2):  # отрабатываем ввод с клавиатуры
             event = '-Ok-'
         if event == QT_ESCAPE:
@@ -158,14 +153,12 @@ def make_window(i_number: str = '55555555', callers: Tuple = None) -> int:
             break
         n_time = int(time.time())  # время сейчас
         if count_calls == 1 and delta_time > CALL_TIMEOUT:
-            # i_caller = callers[count_calls]
             window['Try call'].update(disabled=False)
             info_text = 'время для паузы вышло, можно сделать исходящий звонок'
             window['output'].update(value=info_text)
             s_time = int(time.time())
             print(info_text)
         if count_calls == 2 and delta_time > CALL_TIMEOUT:
-            # i_caller = callers[count_calls]
             window['Send SMS'].update(disabled=False)
             info_text = 'время для паузы вышло, можно отправить смс'
             window['output'].update(value=info_text)
@@ -185,9 +178,13 @@ def make_window(i_number: str = '55555555', callers: Tuple = None) -> int:
                 except Exception as exc:
                     logging.debug("оишбка проверки статуса {0}".format(exc))
             if push_status == 'good':
-                if mini_display:
-                    show_qr(lcd=lcd_comm, image=None)
+                logging.debug('NewTel call verification все ОК, сейчас будем выключать экран')
+                try:
+                    qr_display_out('0', '0', False)
+                except Exception as exc:
+                    logging.debug('ошибка выключения экрана {0}'.format(exc))
                 logging.debug('NewTel call verification все ОК')
+                errorlevel = 0
                 break
             if push_status == 'bad':
                 info_text = 'Покупатель отказался списывать бонусы, делайте звонок'
@@ -236,8 +233,7 @@ def make_window(i_number: str = '55555555', callers: Tuple = None) -> int:
         progress_bar.UpdateBar(i + 1)
         i += 1
     window.close()
-    if mini_display:
-        show_qr(lcd=lcd_comm, image=None)
+    qr_display_out('0', '0', False)  #отключаем минидисплей
     logging.debug('финиш формы GUI, код выхода {0}'.format(errorlevel))
     return errorlevel
 
